@@ -41,6 +41,8 @@ var DefaultProperties = {
         target.numeralThousandsGroupStyle = opts.numeralThousandsGroupStyle || 'thousand';
         target.numeralPositiveOnly = !!opts.numeralPositiveOnly;
         target.stripLeadingZeroes = opts.stripLeadingZeroes !== false;
+        target.numeralDecimalMarkAlternativeInput = opts.numeralDecimalMarkAlternativeInput || target.numeralDecimalMark;
+        target.completeDecimalsOnBlur = !!opts.completeDecimalsOnBlur;
 
         // others
         target.numericOnly = target.creditCard || target.date || !!opts.numericOnly;

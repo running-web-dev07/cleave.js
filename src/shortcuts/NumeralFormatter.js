@@ -6,10 +6,20 @@ var NumeralFormatter = function (numeralDecimalMark,
                                  numeralThousandsGroupStyle,
                                  numeralPositiveOnly,
                                  stripLeadingZeroes,
-                                 delimiter) {
+                                 delimiter,
+                                 completeDecimalsOnBlur) {
     var owner = this;
 
-    owner.numeralDecimalMark = numeralDecimalMark || '.';
+    // if(Array.isArray(numeralDecimalMark))
+    // {
+    //     owner.numeralDecimalMark = numeralDecimalMark[1];
+    //     owner.numeralDecimalInputRegex = numeralDecimalMark[0];
+    // }
+    // else
+    // {
+        owner.numeralDecimalMark = numeralDecimalMark || '.';
+   // }
+
     owner.numeralIntegerScale = numeralIntegerScale > 0 ? numeralIntegerScale : 0;
     owner.numeralDecimalScale = numeralDecimalScale >= 0 ? numeralDecimalScale : 2;
     owner.numeralThousandsGroupStyle = numeralThousandsGroupStyle || NumeralFormatter.groupStyle.thousand;
@@ -17,6 +27,7 @@ var NumeralFormatter = function (numeralDecimalMark,
     owner.stripLeadingZeroes = stripLeadingZeroes !== false;
     owner.delimiter = (delimiter || delimiter === '') ? delimiter : ',';
     owner.delimiterRE = delimiter ? new RegExp('\\' + delimiter, 'g') : '';
+    owner.completeDecimalsOnBlur = completeDecimalsOnBlur;
 };
 
 NumeralFormatter.groupStyle = {

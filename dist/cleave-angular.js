@@ -85,7 +85,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	Cleave.prototype = {
 	    init: function () {
 	        var owner = this, pps = owner.properties;
-
 	        // no need to use this lib
 	        if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.time && !pps.date && (pps.blocksLength === 0 && !pps.prefix)) {
 	            owner.onInput(pps.initValue);
@@ -103,13 +102,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	        owner.onFocusListener = owner.onFocus.bind(owner);
 	        owner.onCutListener = owner.onCut.bind(owner);
 	        owner.onCopyListener = owner.onCopy.bind(owner);
+	        owner.onBlur = owner.onBlur.bind(owner);
 
 	        owner.element.addEventListener('input', owner.onChangeListener);
 	        owner.element.addEventListener('keydown', owner.onKeyDownListener);
 	        owner.element.addEventListener('focus', owner.onFocusListener);
 	        owner.element.addEventListener('cut', owner.onCutListener);
 	        owner.element.addEventListener('copy', owner.onCopyListener);
-
+	        owner.element.addEventListener('blur', owner.onBlur);
 
 	        owner.initPhoneFormatter();
 	        owner.initDateFormatter();
@@ -137,7 +137,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	            pps.numeralThousandsGroupStyle,
 	            pps.numeralPositiveOnly,
 	            pps.stripLeadingZeroes,
-	            pps.delimiter
+	            pps.delimiter,
+	            pps.completeDecimalsOnBlur
 	        );
 	    },
 
@@ -255,7 +256,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	            //  empty
 	        }
 	    },
-
+	    onBlur: function(e){
+	        var owner = this, pps = owner.properties;
+	       // debugger;
+	        if(pps.completeDecimalsOnBlur)
+	        {
+	            owner.setRawValue(owner.getRawValue());
+	        }
+	    },
 	    onInput: function (value) {
 	        var owner = this, pps = owner.properties,
 	            Util = Cleave.Util;
@@ -283,6 +291,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	        // numeral formatter
 	        if (pps.numeral) {
+	            if(pps.numeralDecimalMarkAlternativeInput && value.endsWith(pps.numeralDecimalMarkAlternativeInput))
+	            {
+	                value = value.substring(0,value.length-1) +pps.numeralDecimalMark;
+	            }
 	            if (pps.prefix && (!pps.noImmediatePrefix || value.length)) {
 	                pps.result = pps.prefix + pps.numeralFormatter.format(value);
 	            } else {
@@ -429,7 +441,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	        value = value !== undefined && value !== null ? value.toString() : '';
 
 	        if (pps.numeral) {
-	            value = value.replace('.', pps.numeralDecimalMark);
+	            var dm = pps.numeralDecimalMark;
+	            value = value.replace('.', dm);
+	            if( value.length > 0 
+	                //&& value.indexOf(dm) === -1
+	                && pps.completeDecimalsOnBlur)
+	            {
+	                var partes = value.split(dm);
+	                if(partes.length === 2)
+	                {
+	                    partes[1] = partes[1] + '0'.repeat(pps.numeralDecimalScale-partes[1].length);
+	                    value = partes.join(dm);
+	                }
+	                else
+	                {
+	                    value += dm + '00';
+	                }
+	                
+	            }
 	        }
 
 	        pps.backspace = false;
@@ -476,6 +505,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        owner.element.removeEventListener('focus', owner.onFocusListener);
 	        owner.element.removeEventListener('cut', owner.onCutListener);
 	        owner.element.removeEventListener('copy', owner.onCopyListener);
+	        owner.element.removeEventListener('blur', owner.onBlur);
 	    },
 
 	    toString: function () {
@@ -568,10 +598,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	                                 numeralThousandsGroupStyle,
 	                                 numeralPositiveOnly,
 	                                 stripLeadingZeroes,
-	                                 delimiter) {
+	                                 delimiter,
+	                                 completeDecimalsOnBlur) {
 	    var owner = this;
 
-	    owner.numeralDecimalMark = numeralDecimalMark || '.';
+	    // if(Array.isArray(numeralDecimalMark))
+	    // {
+	    //     owner.numeralDecimalMark = numeralDecimalMark[1];
+	    //     owner.numeralDecimalInputRegex = numeralDecimalMark[0];
+	    // }
+	    // else
+	    // {
+	        owner.numeralDecimalMark = numeralDecimalMark || '.';
+	   // }
+
 	    owner.numeralIntegerScale = numeralIntegerScale > 0 ? numeralIntegerScale : 0;
 	    owner.numeralDecimalScale = numeralDecimalScale >= 0 ? numeralDecimalScale : 2;
 	    owner.numeralThousandsGroupStyle = numeralThousandsGroupStyle || NumeralFormatter.groupStyle.thousand;
@@ -579,6 +619,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    owner.stripLeadingZeroes = stripLeadingZeroes !== false;
 	    owner.delimiter = (delimiter || delimiter === '') ? delimiter : ',';
 	    owner.delimiterRE = delimiter ? new RegExp('\\' + delimiter, 'g') : '';
+	    owner.completeDecimalsOnBlur = completeDecimalsOnBlur;
 	};
 
 	NumeralFormatter.groupStyle = {
@@ -1438,6 +1479,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        target.numeralThousandsGroupStyle = opts.numeralThousandsGroupStyle || 'thousand';
 	        target.numeralPositiveOnly = !!opts.numeralPositiveOnly;
 	        target.stripLeadingZeroes = opts.stripLeadingZeroes !== false;
+	        target.numeralDecimalMarkAlternativeInput = opts.numeralDecimalMarkAlternativeInput || target.numeralDecimalMark;
+	        target.completeDecimalsOnBlur = !!opts.completeDecimalsOnBlur;
 
 	        // others
 	        target.numericOnly = target.creditCard || target.date || !!opts.numericOnly;

@@ -29,7 +29,6 @@ var Cleave = function (element, opts) {
 Cleave.prototype = {
     init: function () {
         var owner = this, pps = owner.properties;
-
         // no need to use this lib
         if (!pps.numeral && !pps.phone && !pps.creditCard && !pps.time && !pps.date && (pps.blocksLength === 0 && !pps.prefix)) {
             owner.onInput(pps.initValue);
@@ -47,13 +46,14 @@ Cleave.prototype = {
         owner.onFocusListener = owner.onFocus.bind(owner);
         owner.onCutListener = owner.onCut.bind(owner);
         owner.onCopyListener = owner.onCopy.bind(owner);
+        owner.onBlur = owner.onBlur.bind(owner);
 
         owner.element.addEventListener('input', owner.onChangeListener);
         owner.element.addEventListener('keydown', owner.onKeyDownListener);
         owner.element.addEventListener('focus', owner.onFocusListener);
         owner.element.addEventListener('cut', owner.onCutListener);
         owner.element.addEventListener('copy', owner.onCopyListener);
-
+        owner.element.addEventListener('blur', owner.onBlur);
 
         owner.initPhoneFormatter();
         owner.initDateFormatter();
@@ -81,7 +81,8 @@ Cleave.prototype = {
             pps.numeralThousandsGroupStyle,
             pps.numeralPositiveOnly,
             pps.stripLeadingZeroes,
-            pps.delimiter
+            pps.delimiter,
+            pps.completeDecimalsOnBlur
         );
     },
 
@@ -199,7 +200,14 @@ Cleave.prototype = {
             //  empty
         }
     },
-
+    onBlur: function(e){
+        var owner = this, pps = owner.properties;
+       // debugger;
+        if(pps.completeDecimalsOnBlur)
+        {
+            owner.setRawValue(owner.getRawValue());
+        }
+    },
     onInput: function (value) {
         var owner = this, pps = owner.properties,
             Util = Cleave.Util;
@@ -227,6 +235,10 @@ Cleave.prototype = {
 
         // numeral formatter
         if (pps.numeral) {
+            if(pps.numeralDecimalMarkAlternativeInput && value.endsWith(pps.numeralDecimalMarkAlternativeInput))
+            {
+                value = value.substring(0,value.length-1) +pps.numeralDecimalMark;
+            }
             if (pps.prefix && (!pps.noImmediatePrefix || value.length)) {
                 pps.result = pps.prefix + pps.numeralFormatter.format(value);
             } else {
@@ -373,7 +385,24 @@ Cleave.prototype = {
         value = value !== undefined && value !== null ? value.toString() : '';
 
         if (pps.numeral) {
-            value = value.replace('.', pps.numeralDecimalMark);
+            var dm = pps.numeralDecimalMark;
+            value = value.replace('.', dm);
+            if( value.length > 0 
+                //&& value.indexOf(dm) === -1
+                && pps.completeDecimalsOnBlur)
+            {
+                var partes = value.split(dm);
+                if(partes.length === 2)
+                {
+                    partes[1] = partes[1] + '0'.repeat(pps.numeralDecimalScale-partes[1].length);
+                    value = partes.join(dm);
+                }
+                else
+                {
+                    value += dm + '00';
+                }
+                
+            }
         }
 
         pps.backspace = false;
@@ -420,6 +449,7 @@ Cleave.prototype = {
         owner.element.removeEventListener('focus', owner.onFocusListener);
         owner.element.removeEventListener('cut', owner.onCutListener);
         owner.element.removeEventListener('copy', owner.onCopyListener);
+        owner.element.removeEventListener('blur', owner.onBlur);
     },
 
     toString: function () {
